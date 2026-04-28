@@ -1,0 +1,16 @@
+{
+  "files": [
+    {
+      "id": "6ee01259-a36a-43ed-a2c6-003298b90b9c",
+      "original_filename": "Field_70-71_CornYield_2008-2021_ForR_0.csv",
+      "original_size": 18917,
+      "encrypted_size": 18928,
+      "encrypted_path": "encrypted_vault\\6ee01259-a36a-43ed-a2c6-003298b90b9c.agv",
+      "algorithm": "AES-256-CBC",
+      "kdf": "PBKDF2-HMAC-SHA256 (310000 iterations)",
+      "integrity": "HMAC-SHA256 (Encrypt-then-MAC)",
+      "uploaded_at": 1776407416,
+      "status": "encrypted"
+    }
+  ]
+}

@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>AgriVault — Secure Agriculture Data Storage</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Mono:wght@400;500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --green-50: #f0fdf4; --green-100: #dcfce7; --green-200: #bbf7d0;
+    --green-400: #4ade80; --green-500: #22c55e; --green-600: #16a34a;
+    --green-700: #15803d; --green-800: #166534; --green-900: #14532d;
+    --earth-50: #fafaf7; --earth-100: #f5f4ee; --earth-200: #e8e6db;
+    --earth-400: #b8b49e; --earth-600: #7c7860; --earth-800: #3d3b2f;
+    --amber-400: #fbbf24; --amber-500: #f59e0b; --amber-600: #d97706;
+    --red-400: #f87171; --red-600: #dc2626;
+    --bg: #f7f8f5; --surface: #ffffff; --border: #e4e3dc;
+    --text: #1a1c18; --muted: #6b7059; --subtle: #9da391;
+    --font-sans: 'Inter', sans-serif;
+    --font-serif: 'DM Serif Display', serif;
+    --font-mono: 'DM Mono', monospace;
+    --radius: 12px; --radius-sm: 8px; --radius-lg: 16px;
+    --shadow: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+    --shadow-md: 0 4px 16px rgba(0,0,0,.08), 0 2px 6px rgba(0,0,0,.05);
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.6;
+  }
+
+  /* ── Sidebar ───────────────────────── */
+  .layout { display: flex; min-height: 100vh; }
+
+  .sidebar {
+    width: 240px; min-height: 100vh;
+    background: var(--green-900);
+    display: flex; flex-direction: column;
+    position: fixed; top: 0; left: 0; bottom: 0;
+    z-index: 100;
+  }
+
+  .sidebar-brand {
+    padding: 28px 24px 20px;
+    border-bottom: 1px solid rgba(255,255,255,.08);
+  }
+  .sidebar-brand .logo-icon {
+    width: 36px; height: 36px; background: var(--green-500);
+    border-radius: 10px; display: flex; align-items: center;
+    justify-content: center; margin-bottom: 10px;
+    font-size: 18px;
+  }
+  .sidebar-brand h1 {
+    font-family: var(--font-serif);
+    font-size: 20px; color: #fff; letter-spacing: .02em;
+    font-weight: 400;
+  }
+  .sidebar-brand p {
+    font-size: 11px; color: rgba(255,255,255,.45);
+    letter-spacing: .06em; text-transform: uppercase; margin-top: 2px;
+  }
+
+  .sidebar-nav { padding: 16px 12px; flex: 1; }
+  .nav-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; border-radius: 8px;
+    color: rgba(255,255,255,.6); font-size: 13px; font-weight: 500;
+    cursor: pointer; transition: all .18s; margin-bottom: 2px;
+    border: none; background: none; width: 100%; text-align: left;
+  }
+  .nav-item:hover { background: rgba(255,255,255,.07); color: rgba(255,255,255,.9); }
+  .nav-item.active { background: rgba(255,255,255,.12); color: #fff; }
+  .nav-item .icon { font-size: 16px; width: 20px; text-align: center; }
+
+  .sidebar-footer {
+    padding: 16px 24px;
+    border-top: 1px solid rgba(255,255,255,.08);
+  }
+  .security-badge {
+    background: rgba(34,197,94,.15); border: 1px solid rgba(34,197,94,.25);
+    border-radius: 8px; padding: 8px 12px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .security-badge .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--green-400); flex-shrink: 0;
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%,100% { opacity: 1; } 50% { opacity: .4; }
+  }
+  .security-badge span { font-size: 11px; color: rgba(255,255,255,.7); }
+
+  /* ── Main Content ──────────────────── */
+  .main { margin-left: 240px; flex: 1; }
+
+  .topbar {
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 16px 32px; display: flex; align-items: center;
+    justify-content: space-between; position: sticky; top: 0; z-index: 50;
+  }
+  .topbar-title { font-size: 15px; font-weight: 600; color: var(--text); }
+  .topbar-sub { font-size: 12px; color: var(--muted); margin-top: 1px; }
+
+  .topbar-right { display: flex; align-items: center; gap: 12px; }
+  .tag {
+    font-size: 11px; padding: 4px 10px; border-radius: 100px;
+    font-weight: 500; letter-spacing: .03em;
+  }
+  .tag-green { background: var(--green-100); color: var(--green-700); }
+  .tag-amber { background: #fef9c3; color: #92400e; }
+  .tag-mono { font-family: var(--font-mono); font-size: 10px; }
+
+  .content { padding: 32px; }
+
+  /* ── Stat Cards ────────────────────── */
+  .stats-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 16px; margin-bottom: 32px;
+  }
+  .stat-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 20px 20px 16px;
+    box-shadow: var(--shadow);
+  }
+  .stat-card .label {
+    font-size: 11px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: .08em; color: var(--muted); margin-bottom: 8px;
+  }
+  .stat-card .value {
+    font-size: 28px; font-weight: 600; color: var(--text);
+    font-family: var(--font-mono); letter-spacing: -.02em;
+  }
+  .stat-card .delta { font-size: 12px; color: var(--subtle); margin-top: 4px; }
+  .stat-card.accent { background: var(--green-900); border-color: var(--green-800); }
+  .stat-card.accent .label { color: rgba(255,255,255,.5); }
+  .stat-card.accent .value { color: var(--green-400); }
+  .stat-card.accent .delta { color: rgba(255,255,255,.35); }
+
+  /* ── Upload Area ───────────────────── */
+  .upload-section {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); overflow: hidden;
+    box-shadow: var(--shadow); margin-bottom: 28px;
+  }
+  .section-header {
+    padding: 20px 24px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .section-title { font-size: 14px; font-weight: 600; color: var(--text); }
+  .section-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+  .upload-body { padding: 24px; }
+
+  .drop-zone {
+    border: 2px dashed var(--green-200);
+    background: var(--green-50);
+    border-radius: var(--radius);
+    padding: 40px 24px; text-align: center;
+    cursor: pointer; transition: all .2s;
+    position: relative;
+  }
+  .drop-zone:hover, .drop-zone.drag-over {
+    border-color: var(--green-400);
+    background: var(--green-100);
+  }
+  .drop-zone input[type="file"] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer;
+  }
+  .drop-icon { font-size: 40px; margin-bottom: 12px; }
+  .drop-zone h3 { font-size: 14px; font-weight: 600; color: var(--green-800); }
+  .drop-zone p { font-size: 12px; color: var(--green-700); margin-top: 4px; }
+
+  .selected-file {
+    margin-top: 16px; padding: 12px 16px;
+    background: var(--earth-100); border: 1px solid var(--earth-200);
+    border-radius: var(--radius-sm);
+    display: none; align-items: center; gap: 12px;
+  }
+  .selected-file.visible { display: flex; }
+  .file-icon { font-size: 24px; }
+  .file-info { flex: 1; }
+  .file-info .name { font-size: 13px; font-weight: 600; color: var(--text); }
+  .file-info .size { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 20px; }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-group label { font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: .04em; text-transform: uppercase; }
+  .form-group input {
+    padding: 10px 14px; border: 1px solid var(--border);
+    border-radius: var(--radius-sm); font-size: 13px;
+    font-family: var(--font-mono); background: var(--surface);
+    color: var(--text); outline: none; transition: border .15s;
+  }
+  .form-group input:focus { border-color: var(--green-500); }
+
+  .algo-info {
+    margin-top: 16px; padding: 12px 16px;
+    background: #f0f7ff; border: 1px solid #bfdbfe;
+    border-radius: var(--radius-sm);
+    font-size: 12px; color: #1e40af; line-height: 1.5;
+  }
+  .algo-info strong { font-weight: 600; }
+
+  .btn {
+    padding: 11px 22px; border-radius: var(--radius-sm);
+    font-size: 13px; font-weight: 600; cursor: pointer;
+    border: none; transition: all .18s; display: inline-flex;
+    align-items: center; gap: 8px;
+  }
+  .btn-primary {
+    background: var(--green-600); color: #fff;
+  }
+  .btn-primary:hover { background: var(--green-700); }
+  .btn-primary:disabled { background: var(--earth-400); cursor: not-allowed; }
+  .btn-outline {
+    background: transparent; border: 1px solid var(--border);
+    color: var(--text);
+  }
+  .btn-outline:hover { background: var(--earth-100); }
+  .btn-danger {
+    background: transparent; border: 1px solid #fecaca;
+    color: var(--red-600); font-size: 12px; padding: 7px 14px;
+  }
+  .btn-danger:hover { background: #fef2f2; }
+  .btn-download {
+    background: transparent; border: 1px solid #bbf7d0;
+    color: var(--green-700); font-size: 12px; padding: 7px 14px;
+  }
+  .btn-download:hover { background: var(--green-50); }
+
+  .upload-actions { margin-top: 20px; display: flex; gap: 12px; align-items: center; }
+
+  /* ── Progress ──────────────────────── */
+  .progress-wrap {
+    margin-top: 16px; display: none;
+  }
+  .progress-wrap.visible { display: block; }
+  .progress-bar-track {
+    height: 6px; background: var(--earth-200);
+    border-radius: 100px; overflow: hidden;
+  }
+  .progress-bar-fill {
+    height: 100%; background: var(--green-500);
+    border-radius: 100px; width: 0%; transition: width .3s;
+  }
+  .progress-label {
+    font-size: 11px; color: var(--muted); margin-top: 6px;
+    font-family: var(--font-mono);
+  }
+
+  /* ── Toast ─────────────────────────── */
+  .toast-container {
+    position: fixed; top: 24px; right: 24px; z-index: 999;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .toast {
+    background: var(--green-900); color: #fff;
+    padding: 12px 18px; border-radius: var(--radius-sm);
+    font-size: 13px; font-weight: 500; box-shadow: var(--shadow-md);
+    display: flex; align-items: center; gap: 10px;
+    animation: slideIn .25s ease;
+    max-width: 320px;
+  }
+  .toast.error { background: var(--red-600); }
+  .toast.warning { background: var(--amber-600); }
+  @keyframes slideIn {
+    from { transform: translateX(40px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+
+  /* ── File Vault Table ──────────────── */
+  .vault-section {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); overflow: hidden;
+    box-shadow: var(--shadow);
+  }
+  .vault-table { width: 100%; border-collapse: collapse; }
+  .vault-table th {
+    text-align: left; padding: 12px 20px;
+    font-size: 11px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: .07em; color: var(--muted);
+    background: var(--earth-50); border-bottom: 1px solid var(--border);
+  }
+  .vault-table td {
+    padding: 14px 20px; font-size: 13px; color: var(--text);
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+  }
+  .vault-table tr:last-child td { border-bottom: none; }
+  .vault-table tr:hover td { background: var(--earth-50); }
+
+  .filename { font-weight: 600; font-size: 13px; }
+  .filepath {
+    font-size: 11px; font-family: var(--font-mono);
+    color: var(--muted); margin-top: 2px;
+  }
+
+  .algo-tag {
+    font-family: var(--font-mono); font-size: 10px;
+    background: #eff6ff; color: #1d4ed8;
+    padding: 3px 8px; border-radius: 100px; font-weight: 500;
+  }
+
+  .empty-state {
+    padding: 64px 24px; text-align: center; color: var(--muted);
+  }
+  .empty-state .empty-icon { font-size: 48px; margin-bottom: 16px; }
+  .empty-state h3 { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+  .empty-state p { font-size: 13px; }
+
+  /* ── Modal (decrypt) ───────────────── */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.4); z-index: 200;
+    display: none; align-items: center; justify-content: center;
+  }
+  .modal-overlay.visible { display: flex; }
+  .modal {
+    background: var(--surface); border-radius: var(--radius-lg);
+    width: 420px; box-shadow: var(--shadow-md);
+    overflow: hidden;
+  }
+  .modal-header {
+    padding: 20px 24px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .modal-header h2 { font-size: 15px; font-weight: 600; }
+  .modal-close {
+    background: none; border: none; font-size: 20px;
+    color: var(--muted); cursor: pointer; line-height: 1;
+  }
+  .modal-body { padding: 24px; }
+  .modal-footer {
+    padding: 16px 24px; border-top: 1px solid var(--border);
+    display: flex; justify-content: flex-end; gap: 12px;
+  }
+
+  /* ── Flow Diagram ──────────────────── */
+  .flow-section {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius-lg); padding: 24px;
+    box-shadow: var(--shadow); margin-bottom: 28px;
+  }
+  .flow-title { font-size: 13px; font-weight: 600; margin-bottom: 20px; color: var(--text); }
+  .flow-steps {
+    display: flex; align-items: center; gap: 0;
+    overflow-x: auto; padding-bottom: 4px;
+  }
+  .flow-step {
+    flex-shrink: 0; text-align: center; min-width: 110px;
+  }
+  .step-icon {
+    width: 44px; height: 44px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px; margin: 0 auto 8px;
+  }
+  .step-label { font-size: 11px; font-weight: 600; color: var(--text); }
+  .step-sub { font-size: 10px; color: var(--muted); margin-top: 2px; line-height: 1.3; }
+  .flow-arrow {
+    flex-shrink: 0; color: var(--earth-400); font-size: 18px;
+    padding: 0 2px; margin-top: -16px;
+  }
+  .s1 { background: #e0f2fe; }
+  .s2 { background: #fef9c3; }
+  .s3 { background: #fce7f3; }
+  .s4 { background: var(--green-100); }
+  .s5 { background: #ede9fe; }
+
+  /* ── Responsive ────────────────────── */
+  @media (max-width: 900px) {
+    .sidebar { display: none; }
+    .main { margin-left: 0; }
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    .form-row { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <div class="logo-icon">🌿</div>
+      <h1>AgriVault</h1>
+      <p>Agriculture Data Security</p>
+    </div>
+    <nav class="sidebar-nav">
+      <button class="nav-item active" onclick="showPage('vault')">
+        <span class="icon">🔒</span> Secure Vault
+      </button>
+      <button class="nav-item" onclick="showPage('about')">
+        <span class="icon">📚</span> How It Works
+      </button>
+      <button class="nav-item" onclick="showPage('api')">
+        <span class="icon">⚙️</span> API Info
+      </button>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="security-badge">
+        <div class="dot"></div>
+        <span>AES-256-CBC Active</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Content -->
+  <div class="main">
+    <div class="topbar">
+      <div>
+        <div class="topbar-title">Hardened Cloud Infrastructure for Agriculture Data</div>
+        <div class="topbar-sub">Final Year Project — Cloud Computing & Cyber Security</div>
+      </div>
+      <div class="topbar-right">
+        <span class="tag tag-green">🔐 AES-256</span>
+        <span class="tag tag-amber tag-mono">PBKDF2-HMAC-SHA256</span>
+      </div>
+    </div>
+
+    <div class="content" id="page-vault">
+
+      <!-- Stats -->
+      <div class="stats-grid" id="stats-grid">
+        <div class="stat-card accent">
+          <div class="label">Encrypted Files</div>
+          <div class="value" id="stat-count">0</div>
+          <div class="delta">Stored in vault</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Original Data</div>
+          <div class="value" id="stat-orig">0 B</div>
+          <div class="delta">Before encryption</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Encrypted Size</div>
+          <div class="value" id="stat-enc">0 B</div>
+          <div class="delta">Stored on disk</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Algorithm</div>
+          <div class="value" style="font-size:14px;padding-top:4px">AES‑256‑CBC</div>
+          <div class="delta">+ HMAC-SHA256 integrity</div>
+        </div>
+      </div>
+
+      <!-- Flow Diagram -->
+      <div class="flow-section">
+        <div class="flow-title">Encryption Pipeline</div>
+        <div class="flow-steps">
+          <div class="flow-step">
+            <div class="step-icon s1">📁</div>
+            <div class="step-label">Upload File</div>
+            <div class="step-sub">Any file type<br>up to 100 MB</div>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step">
+            <div class="step-icon s2">🔑</div>
+            <div class="step-label">PBKDF2 KDF</div>
+            <div class="step-sub">310k iterations<br>Salt + SHA-256</div>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step">
+            <div class="step-icon s3">🔐</div>
+            <div class="step-label">AES-256-CBC</div>
+            <div class="step-sub">Random IV<br>PKCS7 padding</div>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step">
+            <div class="step-icon s4">🛡️</div>
+            <div class="step-label">HMAC-SHA256</div>
+            <div class="step-sub">Encrypt-then-MAC<br>Tamper detection</div>
+          </div>
+          <div class="flow-arrow">→</div>
+          <div class="flow-step">
+            <div class="step-icon s5">☁️</div>
+            <div class="step-label">Vault Storage</div>
+            <div class="step-sub">.agv format<br>Metadata tracked</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Upload Section -->
+      <div class="upload-section">
+        <div class="section-header">
+          <div>
+            <div class="section-title">Encrypt &amp; Upload File</div>
+            <div class="section-sub">Your file is encrypted locally before being stored in the vault</div>
+          </div>
+          <span class="tag tag-green">Data at Rest Protection</span>
+        </div>
+        <div class="upload-body">
+          <div class="drop-zone" id="drop-zone">
+            <input type="file" id="file-input" onchange="onFileSelect(event)"/>
+            <div class="drop-icon">📂</div>
+            <h3>Drop agricultural data file here</h3>
+            <p>Supports CSV, PDF, images, documents — any file type</p>
+          </div>
+
+          <div class="selected-file" id="selected-file">
+            <div class="file-icon" id="selected-icon">📄</div>
+            <div class="file-info">
+              <div class="name" id="selected-name">—</div>
+              <div class="size" id="selected-size">—</div>
+            </div>
+            <button class="btn btn-outline" style="font-size:12px;padding:6px 12px" onclick="clearFile()">✕ Remove</button>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Encryption Password</label>
+              <input type="password" id="enc-password" placeholder="Strong password…" autocomplete="new-password"/>
+            </div>
+            <div class="form-group">
+              <label>Confirm Password</label>
+              <input type="password" id="enc-confirm" placeholder="Confirm password…" autocomplete="new-password"/>
+            </div>
+          </div>
+
+          <div class="algo-info">
+            <strong>🔒 Security Details:</strong> Your file will be encrypted with AES-256-CBC.
+            The password is never stored — it's stretched with PBKDF2-HMAC-SHA256 (310,000 iterations) and a random 256-bit salt.
+            A unique random IV ensures identical files produce different ciphertext.
+            HMAC-SHA256 is applied after encryption for tamper detection.
+          </div>
+
+          <div class="progress-wrap" id="progress-wrap">
+            <div class="progress-bar-track">
+              <div class="progress-bar-fill" id="progress-fill"></div>
+            </div>
+            <div class="progress-label" id="progress-label">Initialising…</div>
+          </div>
+
+          <div class="upload-actions">
+            <button class="btn btn-primary" id="upload-btn" onclick="uploadFile()">
+              🔐 Encrypt &amp; Upload
+            </button>
+            <span style="font-size:12px;color:var(--muted)">File never leaves your browser unencrypted</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Vault -->
+      <div class="vault-section">
+        <div class="section-header">
+          <div>
+            <div class="section-title">🗄️ Encrypted Vault</div>
+            <div class="section-sub">All files are stored in AES-256 encrypted format</div>
+          </div>
+          <button class="btn btn-outline" style="font-size:12px;padding:8px 14px" onclick="loadFiles()">↻ Refresh</button>
+        </div>
+        <div id="vault-content">
+          <table class="vault-table" id="vault-table" style="display:none">
+            <thead>
+              <tr>
+                <th>File</th>
+                <th>Original Size</th>
+                <th>Encrypted Size</th>
+                <th>Algorithm</th>
+                <th>Uploaded</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="vault-body"></tbody>
+          </table>
+          <div class="empty-state" id="empty-state">
+            <div class="empty-icon">🌾</div>
+            <h3>Vault is empty</h3>
+            <p>Upload an agriculture data file above to get started</p>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /page-vault -->
+
+    <!-- About page -->
+    <div class="content" id="page-about" style="display:none">
+      <div style="max-width:680px">
+        <h2 style="font-family:var(--font-serif);font-size:28px;font-weight:400;margin-bottom:8px">How AgriVault Works</h2>
+        <p style="color:var(--muted);font-size:14px;margin-bottom:32px">Technical overview of the encryption pipeline</p>
+
+        <div class="upload-section" style="margin-bottom:24px">
+          <div class="section-header"><div class="section-title">Key Concepts</div></div>
+          <div style="padding:24px;display:flex;flex-direction:column;gap:16px">
+            <div style="display:flex;gap:16px;align-items:flex-start">
+              <div style="min-width:36px;height:36px;border-radius:8px;background:var(--green-100);display:flex;align-items:center;justify-content:center;font-size:18px">🔑</div>
+              <div><strong style="font-size:13px">Key Derivation (PBKDF2-HMAC-SHA256)</strong><br/><span style="font-size:13px;color:var(--muted)">Your password is never used directly as a key. PBKDF2 runs 310,000 SHA-256 iterations with a random 32-byte salt, producing a 256-bit AES key. This makes brute-force attacks computationally infeasible.</span></div>
+            </div>
+            <div style="display:flex;gap:16px;align-items:flex-start">
+              <div style="min-width:36px;height:36px;border-radius:8px;background:#e0f2fe;display:flex;align-items:center;justify-content:center;font-size:18px">🔐</div>
+              <div><strong style="font-size:13px">AES-256-CBC Encryption</strong><br/><span style="font-size:13px;color:var(--muted)">Files are encrypted using AES with a 256-bit key in CBC (Cipher Block Chaining) mode. A random 16-byte IV (Initialization Vector) is generated for each file, ensuring that two encryptions of the same file produce completely different ciphertext.</span></div>
+            </div>
+            <div style="display:flex;gap:16px;align-items:flex-start">
+              <div style="min-width:36px;height:36px;border-radius:8px;background:#fce7f3;display:flex;align-items:center;justify-content:center;font-size:18px">🛡️</div>
+              <div><strong style="font-size:13px">Encrypt-then-MAC (HMAC-SHA256)</strong><br/><span style="font-size:13px;color:var(--muted)">After encryption, HMAC-SHA256 is computed over the ciphertext. During decryption, the HMAC is verified BEFORE decrypting — this prevents padding oracle attacks and detects any file tampering.</span></div>
+            </div>
+            <div style="display:flex;gap:16px;align-items:flex-start">
+              <div style="min-width:36px;height:36px;border-radius:8px;background:#ede9fe;display:flex;align-items:center;justify-content:center;font-size:18px">🗂️</div>
+              <div><strong style="font-size:13px">AgriVault (.agv) File Format</strong><br/><span style="font-size:13px;color:var(--muted)">Each encrypted file uses the custom .agv format: MAGIC(12) | SALT(32) | IV(16) | HMAC(32) | TIMESTAMP(8) | FILENAME_LEN(2) | FILENAME | CIPHERTEXT. The original filename is preserved inside the encrypted blob.</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="upload-section">
+          <div class="section-header"><div class="section-title">Why This Matters for Agriculture</div></div>
+          <div style="padding:24px;font-size:13px;color:var(--muted);line-height:1.8">
+            Agriculture data includes highly sensitive information: crop yield projections, soil composition, irrigation schedules, pesticide usage records, financial reports, and proprietary seed/breeding data. A data breach could expose competitive intelligence, violate GDPR/data protection laws, and damage farmer livelihoods. Encrypting data at rest — even on a trusted cloud drive — ensures that a storage breach does not expose readable data.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- API Info page -->
+    <div class="content" id="page-api" style="display:none">
+      <div style="max-width:680px">
+        <h2 style="font-family:var(--font-serif);font-size:28px;font-weight:400;margin-bottom:24px">Flask API Endpoints</h2>
+        <div class="upload-section">
+          <div class="section-header"><div class="section-title">Available Routes</div></div>
+          <div style="padding:0">
+            <div style="padding:16px 24px;border-bottom:1px solid var(--border);display:flex;gap:16px;align-items:flex-start">
+              <span style="font-family:var(--font-mono);font-size:11px;font-weight:600;background:#dcfce7;color:var(--green-800);padding:3px 8px;border-radius:4px;min-width:52px;text-align:center">POST</span>
+              <div><code style="font-family:var(--font-mono);font-size:12px">/api/upload</code><br/><span style="font-size:12px;color:var(--muted)">Upload &amp; encrypt a file. Body: multipart/form-data with <em>file</em> and <em>password</em> fields.</span></div>
+            </div>
+            <div style="padding:16px 24px;border-bottom:1px solid var(--border);display:flex;gap:16px;align-items:flex-start">
+              <span style="font-family:var(--font-mono);font-size:11px;font-weight:600;background:#dbeafe;color:#1d4ed8;padding:3px 8px;border-radius:4px;min-width:52px;text-align:center">GET</span>
+              <div><code style="font-family:var(--font-mono);font-size:12px">/api/files</code><br/><span style="font-size:12px;color:var(--muted)">List all files in vault (metadata only — no ciphertext exposed).</span></div>
+            </div>
+            <div style="padding:16px 24px;border-bottom:1px solid var(--border);display:flex;gap:16px;align-items:flex-start">
+              <span style="font-family:var(--font-mono);font-size:11px;font-weight:600;background:#dcfce7;color:var(--green-800);padding:3px 8px;border-radius:4px;min-width:52px;text-align:center">POST</span>
+              <div><code style="font-family:var(--font-mono);font-size:12px">/api/download/:id</code><br/><span style="font-size:12px;color:var(--muted)">Decrypt and download file. Body: JSON with <em>password</em>. Returns 401 on wrong password.</span></div>
+            </div>
+            <div style="padding:16px 24px;border-bottom:1px solid var(--border);display:flex;gap:16px;align-items:flex-start">
+              <span style="font-family:var(--font-mono);font-size:11px;font-weight:600;background:#fee2e2;color:var(--red-600);padding:3px 8px;border-radius:4px;min-width:52px;text-align:center">DELETE</span>
+              <div><code style="font-family:var(--font-mono);font-size:12px">/api/delete/:id</code><br/><span style="font-size:12px;color:var(--muted)">Securely wipe a file (overwrite with random bytes before deletion).</span></div>
+            </div>
+            <div style="padding:16px 24px;display:flex;gap:16px;align-items:flex-start">
+              <span style="font-family:var(--font-mono);font-size:11px;font-weight:600;background:#dbeafe;color:#1d4ed8;padding:3px 8px;border-radius:4px;min-width:52px;text-align:center">GET</span>
+              <div><code style="font-family:var(--font-mono);font-size:12px">/api/stats</code><br/><span style="font-size:12px;color:var(--muted)">Vault statistics: file count, total original vs encrypted bytes.</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /main -->
+</div>
+
+<!-- Decrypt Modal -->
+<div class="modal-overlay" id="decrypt-modal">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>🔓 Decrypt &amp; Download</h2>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px">
+        Enter the password used when encrypting this file. The HMAC will be verified before decryption.
+      </p>
+      <div class="form-group">
+        <label>Decryption Password</label>
+        <input type="password" id="dec-password" placeholder="Enter your password…" autocomplete="current-password"/>
+      </div>
+      <div id="dec-error" style="display:none;margin-top:12px;padding:10px 14px;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;font-size:12px;color:var(--red-600)"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="performDecrypt()">🔓 Decrypt &amp; Download</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toast-container"></div>
+
+<script>
+const API = 'http://localhost:5000/api';
+let selectedFile = null;
+let currentDecryptId = null;
+
+// ── Page navigation ──────────────────────────────────────
+function showPage(name) {
+  ['vault','about','api'].forEach(p => {
+    document.getElementById('page-' + p).style.display = p === name ? 'block' : 'none';
+  });
+  document.querySelectorAll('.nav-item').forEach((el,i) => {
+    el.classList.toggle('active', ['vault','about','api'][i] === name);
+  });
+}
+
+// ── File selection ───────────────────────────────────────
+function onFileSelect(e) {
+  const f = e.target.files[0];
+  if (!f) return;
+  selectedFile = f;
+  document.getElementById('selected-name').textContent = f.name;
+  document.getElementById('selected-size').textContent = formatBytes(f.size) + ' — ' + f.type || 'unknown type';
+  document.getElementById('selected-icon').textContent = getFileIcon(f.name);
+  document.getElementById('selected-file').classList.add('visible');
+}
+
+function clearFile() {
+  selectedFile = null;
+  document.getElementById('file-input').value = '';
+  document.getElementById('selected-file').classList.remove('visible');
+}
+
+function getFileIcon(name) {
+  const ext = name.split('.').pop().toLowerCase();
+  const icons = { pdf:'📕', csv:'📊', xlsx:'📗', xls:'📗', doc:'📘', docx:'📘',
+    jpg:'🖼️', jpeg:'🖼️', png:'🖼️', txt:'📝', zip:'📦', json:'📋' };
+  return icons[ext] || '📄';
+}
+
+// ── Upload & Encrypt ─────────────────────────────────────
+async function uploadFile() {
+  if (!selectedFile) { toast('Please select a file first.', 'error'); return; }
+  const pwd = document.getElementById('enc-password').value;
+  const conf = document.getElementById('enc-confirm').value;
+  if (!pwd) { toast('Please enter a password.', 'error'); return; }
+  if (pwd !== conf) { toast('Passwords do not match.', 'error'); return; }
+  if (pwd.length < 8) { toast('Password must be at least 8 characters.', 'warning'); return; }
+
+  const btn = document.getElementById('upload-btn');
+  btn.disabled = true;
+  btn.textContent = '⏳ Encrypting…';
+
+  showProgress(0, 'Preparing file…');
+
+  const formData = new FormData();
+  formData.append('file', selectedFile);
+  formData.append('password', pwd);
+
+  showProgress(20, 'Uploading to server…');
+
+  try {
+    showProgress(40, 'Deriving key (PBKDF2, 310k iterations)…');
+    const res = await fetch(API + '/upload', { method: 'POST', body: formData });
+    showProgress(80, 'Finalising encryption…');
+    const data = await res.json();
+
+    if (!res.ok) throw new Error(data.error || 'Upload failed');
+
+    showProgress(100, '✅ Encrypted successfully!');
+    setTimeout(() => hideProgress(), 2000);
+
+    toast('✅ ' + data.filename + ' encrypted and stored!', 'success');
+    document.getElementById('enc-password').value = '';
+    document.getElementById('enc-confirm').value = '';
+    clearFile();
+    await loadFiles();
+    await loadStats();
+
+  } catch (e) {
+    toast('Error: ' + e.message, 'error');
+    hideProgress();
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '🔐 Encrypt &amp; Upload';
+  }
+}
+
+function showProgress(pct, label) {
+  document.getElementById('progress-wrap').classList.add('visible');
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('progress-label').textContent = label;
+}
+function hideProgress() {
+  document.getElementById('progress-wrap').classList.remove('visible');
+  document.getElementById('progress-fill').style.width = '0%';
+}
+
+// ── Load Files ───────────────────────────────────────────
+async function loadFiles() {
+  try {
+    const res = await fetch(API + '/files');
+    const data = await res.json();
+    renderVault(data.files);
+  } catch (e) {
+    renderVault([]);
+  }
+}
+
+function renderVault(files) {
+  const table = document.getElementById('vault-table');
+  const empty = document.getElementById('empty-state');
+  const tbody = document.getElementById('vault-body');
+
+  if (!files || files.length === 0) {
+    table.style.display = 'none';
+    empty.style.display = 'block';
+    return;
+  }
+
+  table.style.display = 'table';
+  empty.style.display = 'none';
+  tbody.innerHTML = files.map(f => `
+    <tr>
+      <td>
+        <div class="filename">${getFileIcon(f.original_filename)} ${escHtml(f.original_filename)}</div>
+        <div class="filepath">ID: ${f.id.slice(0,8)}…</div>
+      </td>
+      <td>${formatBytes(f.original_size)}</td>
+      <td>${formatBytes(f.encrypted_size)}</td>
+      <td><span class="algo-tag">${f.algorithm}</span></td>
+      <td style="font-size:12px;color:var(--muted)">${formatDate(f.uploaded_at)}</td>
+      <td style="display:flex;gap:8px;align-items:center">
+        <button class="btn btn-download" onclick="openDecrypt('${f.id}')">⬇ Download</button>
+        <button class="btn btn-danger" onclick="deleteFile('${f.id}', '${escHtml(f.original_filename)}')">🗑</button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+// ── Stats ─────────────────────────────────────────────────
+async function loadStats() {
+  try {
+    const res = await fetch(API + '/stats');
+    const data = await res.json();
+    document.getElementById('stat-count').textContent = data.total_files;
+    document.getElementById('stat-orig').textContent = formatBytes(data.total_original_bytes);
+    document.getElementById('stat-enc').textContent = formatBytes(data.total_encrypted_bytes);
+  } catch (e) {}
+}
+
+// ── Decrypt Modal ─────────────────────────────────────────
+function openDecrypt(id) {
+  currentDecryptId = id;
+  document.getElementById('dec-password').value = '';
+  document.getElementById('dec-error').style.display = 'none';
+  document.getElementById('decrypt-modal').classList.add('visible');
+  setTimeout(() => document.getElementById('dec-password').focus(), 100);
+}
+function closeModal() {
+  document.getElementById('decrypt-modal').classList.remove('visible');
+  currentDecryptId = null;
+}
+
+async function performDecrypt() {
+  const pwd = document.getElementById('dec-password').value;
+  if (!pwd) { showDecryptError('Enter a password.'); return; }
+
+  const errEl = document.getElementById('dec-error');
+  errEl.style.display = 'none';
+
+  try {
+    const res = await fetch(API + '/download/' + currentDecryptId, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ password: pwd })
+    });
+
+    if (res.status === 401) {
+      const d = await res.json();
+      showDecryptError(d.error || 'Wrong password or file tampered.');
+      return;
+    }
+    if (!res.ok) {
+      const d = await res.json();
+      showDecryptError(d.error || 'Decryption failed.');
+      return;
+    }
+
+    // Trigger browser download
+    const blob = await res.blob();
+    const cd = res.headers.get('Content-Disposition') || '';
+    const match = cd.match(/filename="?([^"]+)"?/);
+    const filename = match ? match[1] : 'decrypted_file';
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename; a.click();
+    URL.revokeObjectURL(url);
+    closeModal();
+    toast('✅ ' + filename + ' decrypted and downloaded!', 'success');
+  } catch (e) {
+    showDecryptError('Network error: ' + e.message);
+  }
+}
+
+function showDecryptError(msg) {
+  const el = document.getElementById('dec-error');
+  el.textContent = '❌ ' + msg;
+  el.style.display = 'block';
+}
+
+// ── Delete ────────────────────────────────────────────────
+async function deleteFile(id, name) {
+  if (!confirm('Securely delete "' + name + '"?\n\nThe file will be overwritten with random bytes before deletion. This cannot be undone.')) return;
+  try {
+    const res = await fetch(API + '/delete/' + id, { method: 'DELETE' });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error);
+    toast('🗑 ' + name + ' securely deleted.', 'success');
+    await loadFiles();
+    await loadStats();
+  } catch (e) {
+    toast('Delete failed: ' + e.message, 'error');
+  }
+}
+
+// ── Drag & Drop ───────────────────────────────────────────
+const dz = document.getElementById('drop-zone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+dz.addEventListener('drop', e => {
+  e.preventDefault(); dz.classList.remove('drag-over');
+  const f = e.dataTransfer.files[0];
+  if (f) { selectedFile = f; onFileSelect({ target: { files: [f] } }); }
+});
+
+// ── Toast ─────────────────────────────────────────────────
+function toast(msg, type = 'success') {
+  const el = document.createElement('div');
+  el.className = 'toast' + (type === 'error' ? ' error' : type === 'warning' ? ' warning' : '');
+  el.textContent = msg;
+  document.getElementById('toast-container').appendChild(el);
+  setTimeout(() => el.remove(), 4000);
+}
+
+// ── Utilities ─────────────────────────────────────────────
+function formatBytes(b) {
+  if (!b) return '0 B';
+  const units = ['B','KB','MB','GB'];
+  let i = 0;
+  while (b >= 1024 && i < units.length - 1) { b /= 1024; i++; }
+  return b.toFixed(i === 0 ? 0 : 1) + ' ' + units[i];
+}
+function formatDate(ts) {
+  return new Date(ts * 1000).toLocaleString();
+}
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ── Init ──────────────────────────────────────────────────
+loadFiles();
+loadStats();
+
+document.getElementById('dec-password').addEventListener('keydown', e => {
+  if (e.key === 'Enter') performDecrypt();
+});
+</script>
+</body>
+</html>
